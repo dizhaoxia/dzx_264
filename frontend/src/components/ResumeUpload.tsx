@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Upload, Progress, List, Button, Space, Alert, message } from 'antd';
+import { Modal, Upload, Progress, List, Button, Space, Alert, message, Select } from 'antd';
 import { InboxOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd/es/upload/interface';
-import type { UploadProgress } from '@/types';
+import type { UploadProgress, RecruitChannel } from '@/types';
 import { candidateApi } from '@/services/api';
 import { useKanbanStore } from '@/store/kanbanStore';
+import { RECRUIT_CHANNELS } from '@/types';
 
 const { Dragger } = Upload;
 
@@ -27,6 +28,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ open, onClose }) => {
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<{ success: number; error: number }>({ success: 0, error: 0 });
   const [showResults, setShowResults] = useState(false);
+  const [source, setSource] = useState<RecruitChannel>('BOSS直聘');
   const processingRef = useRef<Set<string>>(new Set());
 
   const currentPositionId = useKanbanStore((state) => state.currentPositionId);
@@ -72,7 +74,8 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ open, onClose }) => {
             progress: Math.min(progress, 99),
             status: 'uploading',
           });
-        }
+        },
+        source
       );
 
       updateTask(task.uid, {
@@ -227,6 +230,18 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ open, onClose }) => {
           style={{ marginBottom: 16 }}
         />
       )}
+
+      <div style={{ marginBottom: 16 }}>
+        <Space>
+          <span style={{ color: '#595959' }}>招聘渠道：</span>
+          <Select
+            value={source}
+            onChange={(v) => setSource(v)}
+            style={{ width: 180 }}
+            options={RECRUIT_CHANNELS.map((c) => ({ value: c, label: c }))}
+          />
+        </Space>
+      </div>
 
       <Dragger
         name="file"

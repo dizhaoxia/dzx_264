@@ -42,6 +42,7 @@ export class ParseService {
       email: '',
       workYears: 0,
       skills: [],
+      education: '',
       confidence: 0,
       parseMethod: '',
     };
@@ -103,6 +104,7 @@ export class ParseService {
       email: '',
       workYears: 0,
       skills: [],
+      education: '',
       confidence: 0,
       parseMethod: '',
     };
@@ -345,6 +347,7 @@ export class ParseService {
       email: '',
       workYears: 0,
       skills: [] as string[],
+      education: '',
     };
 
     const phoneRegex = /(?<!\d)1[3-9]\d{9}(?!\d)/g;
@@ -383,6 +386,8 @@ export class ParseService {
     info.workYears = this.extractWorkYears(text);
 
     info.skills = this.extractSkills(text);
+
+    info.education = this.extractEducation(text);
 
     return info;
   }
@@ -482,6 +487,27 @@ export class ParseService {
     }
 
     return Array.from(foundSkills);
+  }
+
+  private extractEducation(text: string): string {
+    const orderedLevels = ['博士', '硕士', 'MBA', '本科', '大专', '专科', '高中', '中专'];
+    const patterns = [
+      /(?:学历|学位|education|degree)[:：\s]*([^\s,，。、；]+)/i,
+      /(博士|硕士研究生|硕士|MBA|大学本科|本科|大专|专科|高中|中专)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const raw = match[1] || match[0];
+        for (const level of orderedLevels) {
+          if (raw.includes(level)) {
+            return level === '专科' ? '大专' : level;
+          }
+        }
+      }
+    }
+    return '';
   }
 
   private isCommonWord(word: string): boolean {

@@ -44,8 +44,9 @@ public class CandidateController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UploadResponse> uploadResume(
             @RequestParam Long positionId,
-            @RequestParam("file") MultipartFile file) throws Exception {
-        UploadResponse response = candidateService.uploadResume(positionId, file);
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false, defaultValue = "BOSS直聘") String source) throws Exception {
+        UploadResponse response = candidateService.uploadResume(positionId, file, source);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 

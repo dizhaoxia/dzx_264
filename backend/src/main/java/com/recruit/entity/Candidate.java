@@ -44,6 +44,12 @@ public class Candidate {
     @Column(name = "resume_file_url", length = 500)
     private String resumeFileUrl;
 
+    @Column(name = "source")
+    private String source = "BOSS直聘";
+
+    @Column(name = "education")
+    private String education;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "parsed_data", columnDefinition = "jsonb")
     private Map<String, Object> parsedData;

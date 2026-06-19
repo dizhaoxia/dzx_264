@@ -53,7 +53,7 @@ public class CandidateService {
     }
 
     @Transactional
-    public UploadResponse uploadResume(Long positionId, MultipartFile file) throws Exception {
+    public UploadResponse uploadResume(Long positionId, MultipartFile file, String source) throws Exception {
         String fileName = file.getOriginalFilename();
         String fileUrl = minioService.uploadFile(file);
 
@@ -61,6 +61,9 @@ public class CandidateService {
         candidate.setPositionId(positionId);
         candidate.setResumeFileUrl(fileUrl);
         candidate.setCurrentStage("初筛");
+        if (source != null && !source.isBlank()) {
+            candidate.setSource(source);
+        }
         Integer nextOrder = candidateRepository.getNextCardOrder(positionId, "初筛");
         candidate.setCardOrder(nextOrder == null ? 0 : nextOrder);
         candidate = candidateRepository.save(candidate);
@@ -118,6 +121,9 @@ public class CandidateService {
             candidate.setWorkYears(result.getWorkYears());
             candidate.setSkills(result.getSkills());
             candidate.setConfidenceScore(result.getConfidenceScore());
+            if (result.getEducation() != null && !result.getEducation().isBlank()) {
+                candidate.setEducation(result.getEducation());
+            }
             if (result.getRawData() != null) {
                 Map<String, Object> parsedData = new HashMap<>();
                 if (result.getRawData() instanceof Map) {

@@ -15,6 +15,7 @@ public class ParseResultDTO {
     private String email;
     private Integer workYears;
     private List<String> skills;
+    private String education;
 
     @JsonAlias({"confidenceScore", "confidence"})
     private BigDecimal confidenceScore;

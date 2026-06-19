@@ -8,6 +8,10 @@ import type {
   ReorderRequest,
   UploadResponse,
   ApiError,
+  SearchResult,
+  SearchSortBy,
+  AnalyticsSummary,
+  TrendPoint,
 } from '@/types';
 
 const api = axios.create({
@@ -53,11 +57,15 @@ export const candidateApi = {
   uploadResume: (
     positionId: number,
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    source?: string
   ): Promise<AxiosResponse<UploadResponse>> => {
     const formData = new FormData();
     formData.append('positionId', String(positionId));
     formData.append('file', file);
+    if (source) {
+      formData.append('source', source);
+    }
 
     return api.post('/candidates/upload', formData, {
       headers: {
@@ -82,6 +90,46 @@ export const candidateApi = {
 
   delete: (id: number): Promise<AxiosResponse<{ message: string }>> =>
     api.delete(`/candidates/${id}`),
+};
+
+export const searchApi = {
+  search: (
+    q: string,
+    sortBy?: SearchSortBy,
+    positionId?: number,
+    page = 1,
+    size = 10
+  ): Promise<AxiosResponse<SearchResult>> =>
+    api.get('/search', {
+      params: {
+        q: q || undefined,
+        sortBy: sortBy || undefined,
+        positionId: positionId || undefined,
+        page,
+        size,
+      },
+    }),
+};
+
+export const analyticsApi = {
+  summary: (
+    startDate?: string,
+    endDate?: string
+  ): Promise<AxiosResponse<AnalyticsSummary>> =>
+    api.get('/analytics/summary', {
+      params: { startDate: startDate || undefined, endDate: endDate || undefined },
+    }),
+
+  trend: (
+    startDate?: string,
+    endDate?: string
+  ): Promise<AxiosResponse<TrendPoint[]>> =>
+    api.get('/analytics/trend', {
+      params: { startDate: startDate || undefined, endDate: endDate || undefined },
+    }),
+
+  refresh: (): Promise<AxiosResponse<{ success: boolean; message: string; count: number }>> =>
+    api.post('/analytics/refresh'),
 };
 
 export default api;

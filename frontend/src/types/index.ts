@@ -29,6 +29,8 @@ export interface Candidate {
   parsedData: Record<string, any>;
   cardOrder: number;
   version: number;
+  source: string;
+  education: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -103,3 +105,68 @@ export interface ApiError {
   message: string;
   path: string;
 }
+
+export type SearchSortBy = 'relevance' | 'updatedAt' | 'education';
+
+export interface SearchItem {
+  candidateId: number;
+  name: string;
+  positionId: number;
+  positionTitle: string;
+  currentStage: string;
+  workYears: number;
+  education: string;
+  source: string;
+  confidenceScore: number;
+  updatedAt: string;
+  skills: string[];
+  rank: number;
+  snippet: string;
+}
+
+export interface SearchResult {
+  query: string;
+  sortBy: string;
+  page: number;
+  size: number;
+  total: number;
+  items: SearchItem[];
+}
+
+export interface ChannelSummary {
+  source: string;
+  applicationCount: number;
+  screeningPassedCount: number;
+  screeningPassRate: number;
+  offerCount: number;
+  avgScreeningToOfferHours: number | null;
+}
+
+export interface FunnelStage {
+  stage: string;
+  stageOrder: number;
+  count: number;
+}
+
+export interface TrendPoint {
+  date: string;
+  source: string;
+  avgHours: number | null;
+  offerCount: number;
+}
+
+export interface AnalyticsSummary {
+  startDate: string;
+  endDate: string;
+  channels: ChannelSummary[];
+  funnel: FunnelStage[];
+}
+
+export const RECRUIT_CHANNELS = [
+  'BOSS直聘',
+  '猎聘',
+  '内推',
+  '校园',
+] as const;
+
+export type RecruitChannel = (typeof RECRUIT_CHANNELS)[number];
