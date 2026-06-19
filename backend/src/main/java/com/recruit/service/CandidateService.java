@@ -34,6 +34,7 @@ public class CandidateService {
     private final StageLogRepository stageLogRepository;
     private final MinioService minioService;
     private final StageStateMachine stateMachine;
+    private final OfferApprovalService offerApprovalService;
 
     @Value("${parser.service.url}")
     private String parserServiceUrl;
@@ -151,6 +152,13 @@ public class CandidateService {
             return result;
         }
 
+        if (Boolean.TRUE.equals(candidate.getLocked())) {
+            result.put("success", false);
+            result.put("message", "该候选人Offer审批进行中，卡片已锁定，不可拖拽");
+            result.put("locked", true);
+            return result;
+        }
+
         String validationError = stateMachine.validateTransition(
                 candidate.getCurrentStage(), request.getToStage());
         if (validationError != null) {
@@ -179,6 +187,11 @@ public class CandidateService {
 
         try {
             candidate = candidateRepository.save(candidate);
+            if ("Offer".equals(toStage) && !"Offer".equals(fromStage)) {
+                offerApprovalService.createApprovalForCandidate(candidate.getId(), candidate.getPositionId());
+                candidate.setLocked(true);
+                result.put("offerApprovalCreated", true);
+            }
             result.put("success", true);
             result.put("candidate", candidate);
             return result;
@@ -223,5 +236,27 @@ public class CandidateService {
                     return true;
                 })
                 .orElse(false);
+    }
+
+    /**
+     * Offer审批通过后的看板服务回调：将候选人状态标记为「已录用」并解除卡片锁定。
+     */
+    @Transactional
+    public void markHired(Long candidateId) {
+        candidateRepository.findById(candidateId).ifPresent(candidate -> {
+            String fromStage = candidate.getCurrentStage();
+            candidate.setCurrentStage("已录用");
+            candidate.setLocked(false);
+            candidateRepository.save(candidate);
+
+            StageLog stageLog = new StageLog();
+            stageLog.setCandidateId(candidateId);
+            stageLog.setFromStage(fromStage);
+            stageLog.setToStage("已录用");
+            stageLog.setRemark("Offer审批通过，自动录用");
+            stageLogRepository.save(stageLog);
+
+            log.info("候选人已标记为「已录用」: candidateId={}, fromStage={}", candidateId, fromStage);
+        });
     }
 }

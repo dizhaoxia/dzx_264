@@ -12,6 +12,8 @@ interface KanbanColumnProps {
   candidates: Candidate[];
   isOver?: boolean;
   onViewLogs: (candidate: Candidate) => void;
+  onScheduleInterview?: (candidate: Candidate) => void;
+  onViewOffer?: (candidate: Candidate) => void;
 }
 
 const getStageColor = (stage: string): string => {
@@ -21,6 +23,7 @@ const getStageColor = (stage: string): string => {
     '二面': '#722ed1',
     'HR面': '#fa8c16',
     'Offer': '#13c2c2',
+    '已录用': '#389e0d',
     '已淘汰': '#ff4d4f',
   };
   return colorMap[stage] || '#8c8c8c';
@@ -31,6 +34,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   candidates,
   isOver,
   onViewLogs,
+  onScheduleInterview,
+  onViewOffer,
 }) => {
   const { setNodeRef } = useDroppable({
     id: stage,
@@ -128,6 +133,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 key={candidate.id}
                 candidate={candidate}
                 onViewLogs={onViewLogs}
+                onScheduleInterview={onScheduleInterview}
+                onViewOffer={onViewOffer}
               />
             ))
           )}

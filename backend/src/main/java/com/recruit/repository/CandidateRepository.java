@@ -33,6 +33,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
            "WHEN 'HR面' THEN 4 " +
            "WHEN 'Offer' THEN 5 " +
            "WHEN '已淘汰' THEN 6 " +
-           "ELSE 7 END, c.cardOrder ASC")
+           "WHEN '已录用' THEN 7 " +
+           "ELSE 8 END, c.cardOrder ASC")
     List<Candidate> findAllByPositionIdOrderedByStage(@Param("positionId") Long positionId);
 }

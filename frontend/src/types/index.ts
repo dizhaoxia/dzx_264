@@ -33,6 +33,8 @@ export interface Candidate {
   education: string;
   createdAt: string;
   updatedAt: string;
+  locked?: boolean;
+  talentPoolStatus?: string;
 }
 
 export interface StageLog {
@@ -170,3 +172,102 @@ export const RECRUIT_CHANNELS = [
 ] as const;
 
 export type RecruitChannel = (typeof RECRUIT_CHANNELS)[number];
+
+export interface Interviewer {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  title: string;
+}
+
+export interface MeetingRoom {
+  id: number;
+  name: string;
+  location: string;
+  capacity: number;
+}
+
+export interface InterviewSchedule {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  positionId: number;
+  stage: string;
+  interviewerId: number;
+  interviewerName: string;
+  roomId: number;
+  roomName: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  round: number;
+  remark: string;
+  createdAt: string;
+}
+
+export interface InterviewScheduleRequest {
+  candidateId: number;
+  positionId?: number;
+  stage: string;
+  interviewerId: number;
+  roomId: number;
+  startTime: string;
+  endTime: string;
+  round?: number;
+  remark?: string;
+}
+
+export interface RecommendedSlot {
+  startTime: string;
+  endTime: string;
+}
+
+export interface ConflictCheckResult {
+  conflict: boolean;
+  interviewerConflict: boolean;
+  roomConflict: boolean;
+  message?: string;
+  conflictingSchedules: InterviewSchedule[];
+  recommendedSlots: RecommendedSlot[];
+}
+
+export interface OfferApprovalNode {
+  id: number;
+  nodeOrder: number;
+  roleName: string;
+  approverName: string;
+  status: string;
+  comment: string;
+  approvedAt: string;
+}
+
+export interface OfferApproval {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  positionId: number;
+  status: string;
+  salaryPackage: string;
+  onboardingDate: string;
+  currentNode: number;
+  createdAt: string;
+  updatedAt: string;
+  nodes: OfferApprovalNode[];
+}
+
+export interface CreateOfferApprovalRequest {
+  candidateId: number;
+  salaryPackage: string;
+  onboardingDate: string;
+}
+
+export interface UpdateOfferRequest {
+  salaryPackage?: string;
+  onboardingDate?: string;
+}
+
+export interface ApprovalActionRequest {
+  approverName: string;
+  comment?: string;
+}

@@ -41,7 +41,8 @@ public class SearchService {
                 .addValue("offset", (page - 1) * size)
                 .addValue("size", size);
 
-        StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+        StringBuilder where = new StringBuilder(
+                " WHERE 1=1 AND (c.talent_pool_status IS NULL OR c.talent_pool_status <> '已入职') ");
         boolean hasText = parsed.tsQuery != null && !parsed.tsQuery.isBlank();
 
         if (hasText) {

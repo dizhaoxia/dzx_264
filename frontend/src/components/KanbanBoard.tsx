@@ -23,9 +23,17 @@ import CandidateCard from './CandidateCard';
 
 interface KanbanBoardProps {
   onViewLogs: (candidate: Candidate) => void;
+  onScheduleInterview?: (candidate: Candidate) => void;
+  onViewOffer?: (candidate: Candidate) => void;
+  onMovedToOffer?: (candidate: Candidate) => void;
 }
 
-const KanbanBoard: React.FC<KanbanBoardProps> = ({ onViewLogs }) => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({
+  onViewLogs,
+  onScheduleInterview,
+  onViewOffer,
+  onMovedToOffer,
+}) => {
   const {
     candidates,
     loading,
@@ -129,10 +137,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onViewLogs }) => {
 
         await reorderCandidates(targetStage, candidateIds);
       } else {
-        await moveCandidate(activeId, targetStage, targetIndex);
+        const success = await moveCandidate(activeId, targetStage, targetIndex);
+        if (success && targetStage === 'Offer') {
+          onMovedToOffer?.(activeCandidate);
+        }
       }
     },
-    [candidates, getCandidatesByStage, moveCandidate, reorderCandidates]
+    [candidates, getCandidatesByStage, moveCandidate, reorderCandidates, onMovedToOffer]
   );
 
   if (!currentPositionId) {
@@ -192,6 +203,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onViewLogs }) => {
               candidates={getCandidatesByStage(stage)}
               isOver={overColumn === stage}
               onViewLogs={onViewLogs}
+              onScheduleInterview={onScheduleInterview}
+              onViewOffer={onViewOffer}
             />
           ))}
         </div>

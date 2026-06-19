@@ -12,6 +12,7 @@ public class StageStateMachine {
 
     private static final String ELIMINATED = "已淘汰";
     private static final String OFFER = "Offer";
+    private static final String HIRED = "已录用";
 
     private static final Set<String> PROGRESS_STAGES = Set.of(
         "初筛", "一面", "二面", "HR面"
@@ -23,7 +24,8 @@ public class StageStateMachine {
         "二面", Set.of("HR面", ELIMINATED, "一面"),
         "HR面", Set.of(OFFER, ELIMINATED, "二面"),
         OFFER, Set.of(ELIMINATED),
-        ELIMINATED, Set.of()
+        ELIMINATED, Set.of(),
+        HIRED, Set.of()
     );
 
     public boolean canTransition(String fromStage, String toStage) {
@@ -84,6 +86,6 @@ public class StageStateMachine {
     }
 
     public boolean isTerminalStage(String stage) {
-        return ELIMINATED.equals(stage) || OFFER.equals(stage);
+        return ELIMINATED.equals(stage) || OFFER.equals(stage) || HIRED.equals(stage);
     }
 }

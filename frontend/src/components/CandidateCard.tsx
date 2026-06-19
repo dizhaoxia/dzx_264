@@ -7,6 +7,9 @@ import {
   HistoryOutlined,
   DeleteOutlined,
   FileTextOutlined,
+  CalendarOutlined,
+  SolutionOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,9 +21,16 @@ import { message } from 'antd';
 interface CandidateCardProps {
   candidate: Candidate;
   onViewLogs: (candidate: Candidate) => void;
+  onScheduleInterview?: (candidate: Candidate) => void;
+  onViewOffer?: (candidate: Candidate) => void;
 }
 
-const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onViewLogs }) => {
+const CandidateCard: React.FC<CandidateCardProps> = ({
+  candidate,
+  onViewLogs,
+  onScheduleInterview,
+  onViewOffer,
+}) => {
   const removeCandidate = useKanbanStore((state) => state.removeCandidate);
 
   const {
@@ -36,6 +46,7 @@ const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onViewLogs }) 
       type: 'candidate',
       candidate,
     },
+    disabled: candidate.locked,
   });
 
   const style = {
@@ -75,13 +86,24 @@ const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onViewLogs }) 
         className="candidate-card"
         style={{
           marginBottom: 8,
-          cursor: 'grab',
+          cursor: candidate.locked ? 'not-allowed' : 'grab',
           borderLeft: `4px solid ${getConfidenceColor(candidate.confidenceScore || 0)}`,
+          opacity: candidate.locked ? 0.6 : 1,
         }}
         hoverable
       >
         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <strong style={{ fontSize: 16 }}>{candidate.name}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <strong style={{ fontSize: 16 }}>{candidate.name}</strong>
+            {candidate.locked && (
+              <Tooltip title="卡片已锁定">
+                <LockOutlined style={{ color: '#ff4d4f', fontSize: 14 }} />
+              </Tooltip>
+            )}
+            {candidate.talentPoolStatus === '已入职' && (
+              <Tag color="green" style={{ margin: 0 }}>已入职</Tag>
+            )}
+          </div>
           <Tooltip title="置信度">
             <div style={{ width: 60, textAlign: 'center' }}>
               <Progress
@@ -135,6 +157,32 @@ const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onViewLogs }) 
                 onClick={handleDownload}
               />
             </Tooltip>
+            {['一面', '二面', 'HR面'].includes(candidate.currentStage) && (
+              <Tooltip title="发起面试">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CalendarOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onScheduleInterview?.(candidate);
+                  }}
+                />
+              </Tooltip>
+            )}
+            {candidate.currentStage === 'Offer' && (
+              <Tooltip title="Offer审批">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<SolutionOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewOffer?.(candidate);
+                  }}
+                />
+              </Tooltip>
+            )}
             <Tooltip title="查看流转日志">
               <Button
                 type="text"

@@ -17,6 +17,8 @@ import KanbanBoard from './components/KanbanBoard';
 import PositionForm from './components/PositionForm';
 import ResumeUpload from './components/ResumeUpload';
 import StageLogModal from './components/StageLogModal';
+import InterviewScheduleModal from './components/InterviewScheduleModal';
+import OfferApprovalModal from './components/OfferApprovalModal';
 import './App.css';
 
 const App: React.FC = () => {
@@ -38,6 +40,10 @@ const App: React.FC = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [interviewModalOpen, setInterviewModalOpen] = useState(false);
+  const [offerModalOpen, setOfferModalOpen] = useState(false);
+  const [interviewCandidate, setInterviewCandidate] = useState<Candidate | null>(null);
+  const [offerCandidate, setOfferCandidate] = useState<Candidate | null>(null);
 
   useEffect(() => {
     fetchPositions();
@@ -76,6 +82,33 @@ const App: React.FC = () => {
   const handleViewLogs = (candidate: Candidate) => {
     setSelectedCandidate(candidate);
     setLogModalOpen(true);
+  };
+
+  const handleScheduleInterview = (candidate: Candidate) => {
+    setInterviewCandidate(candidate);
+    setInterviewModalOpen(true);
+  };
+
+  const handleViewOffer = (candidate: Candidate) => {
+    setOfferCandidate(candidate);
+    setOfferModalOpen(true);
+  };
+
+  const handleMovedToOffer = (candidate: Candidate) => {
+    setOfferCandidate(candidate);
+    setOfferModalOpen(true);
+  };
+
+  const handleInterviewSuccess = () => {
+    if (currentPositionId) {
+      fetchCandidates(currentPositionId);
+    }
+  };
+
+  const handleOfferUpdated = () => {
+    if (currentPositionId) {
+      fetchCandidates(currentPositionId);
+    }
   };
 
   const currentPosition = getCurrentPosition();
@@ -210,7 +243,12 @@ const App: React.FC = () => {
 
         <div className="main-body">
           <div className="kanban-container">
-            <KanbanBoard onViewLogs={handleViewLogs} />
+            <KanbanBoard
+              onViewLogs={handleViewLogs}
+              onScheduleInterview={handleScheduleInterview}
+              onViewOffer={handleViewOffer}
+              onMovedToOffer={handleMovedToOffer}
+            />
           </div>
         </div>
       </main>
@@ -236,6 +274,26 @@ const App: React.FC = () => {
           setSelectedCandidate(null);
         }}
         candidate={selectedCandidate}
+      />
+
+      <InterviewScheduleModal
+        open={interviewModalOpen}
+        candidate={interviewCandidate}
+        onClose={() => {
+          setInterviewModalOpen(false);
+          setInterviewCandidate(null);
+        }}
+        onSuccess={handleInterviewSuccess}
+      />
+
+      <OfferApprovalModal
+        open={offerModalOpen}
+        candidate={offerCandidate}
+        onClose={() => {
+          setOfferModalOpen(false);
+          setOfferCandidate(null);
+        }}
+        onUpdated={handleOfferUpdated}
       />
     </div>
   );

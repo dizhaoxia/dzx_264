@@ -46,22 +46,50 @@ LANGUAGE sql IMMUTABLE AS $$
     END;
 $$;
 
--- 4. 倒排索引列（生成列）：基于姓名、技能、简历全文构建 tsvector，
---    候选人保存时自动同步（增量）；本迁移为历史全量数据回填。
-ALTER TABLE candidates ADD COLUMN search_vector tsvector
-    GENERATED ALWAYS AS (
-        to_tsvector('simple', fts_cjk(
-            coalesce(name, '') || ' ' ||
-            coalesce(array_to_string(skills, ' '), '') || ' ' ||
-            coalesce(parsed_data->>'rawText', '')
-        ))
-    ) STORED;
+-- 4. 倒排索引列（普通列，由触发器维护更新）：
+--    基于姓名、技能、简历全文构建 tsvector
+ALTER TABLE candidates ADD COLUMN search_vector tsvector;
 
 CREATE INDEX idx_candidates_search_vector ON candidates USING GIN (search_vector);
 CREATE INDEX idx_candidates_source ON candidates(source);
 CREATE INDEX idx_candidates_education ON candidates(education);
 
--- 5. 招聘渠道统计事实表（预先聚合，供分析看板查询）
+-- 5. 创建统一的 tsvector 计算函数（供触发器和回填使用）
+CREATE OR REPLACE FUNCTION candidates_tsvector(
+    p_name text,
+    p_skills text[],
+    p_parsed_data jsonb
+) RETURNS tsvector
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN to_tsvector(
+        'simple',
+        fts_cjk(
+            coalesce(p_name, '') || ' ' ||
+            coalesce(array_to_string(p_skills, ' '), '') || ' ' ||
+            coalesce(p_parsed_data->>'rawText', '')
+        )
+    );
+END;
+$$;
+
+-- 6. 创建 BEFORE INSERT OR UPDATE 触发器，自动维护 search_vector
+CREATE OR REPLACE FUNCTION candidates_search_vector_trigger()
+RETURNS trigger AS $$
+BEGIN
+    NEW.search_vector := candidates_tsvector(NEW.name, NEW.skills, NEW.parsed_data);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_candidates_search_vector
+BEFORE INSERT OR UPDATE ON candidates
+FOR EACH ROW EXECUTE FUNCTION candidates_search_vector_trigger();
+
+-- 7. 回填已有候选人的 search_vector（如果 V1 执行后已有数据）
+UPDATE candidates SET search_vector = candidates_tsvector(name, skills, parsed_data);
+
+-- 8. 招聘渠道统计事实表（预先聚合，供分析看板查询）
 CREATE TABLE channel_application_facts (
     candidate_id BIGINT PRIMARY KEY,
     source VARCHAR(50) NOT NULL,

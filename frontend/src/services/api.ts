@@ -12,6 +12,15 @@ import type {
   SearchSortBy,
   AnalyticsSummary,
   TrendPoint,
+  Interviewer,
+  MeetingRoom,
+  InterviewSchedule,
+  InterviewScheduleRequest,
+  ConflictCheckResult,
+  OfferApproval,
+  CreateOfferApprovalRequest,
+  UpdateOfferRequest,
+  ApprovalActionRequest,
 } from '@/types';
 
 const api = axios.create({
@@ -130,6 +139,46 @@ export const analyticsApi = {
 
   refresh: (): Promise<AxiosResponse<{ success: boolean; message: string; count: number }>> =>
     api.post('/analytics/refresh'),
+};
+
+export const interviewApi = {
+  getInterviewers: (): Promise<AxiosResponse<Interviewer[]>> =>
+    api.get('/interviews/interviewers'),
+
+  getRooms: (): Promise<AxiosResponse<MeetingRoom[]>> => api.get('/interviews/rooms'),
+
+  checkConflict: (data: {
+    candidateId: number;
+    interviewerId: number;
+    roomId: number;
+    startTime: string;
+    endTime: string;
+  }): Promise<AxiosResponse<ConflictCheckResult>> => api.post('/interviews/check-conflict', data),
+
+  create: (data: InterviewScheduleRequest): Promise<AxiosResponse<InterviewSchedule>> =>
+    api.post('/interviews', data),
+
+  getByCandidate: (candidateId: number): Promise<AxiosResponse<InterviewSchedule[]>> =>
+    api.get(`/interviews/candidate/${candidateId}`),
+};
+
+export const offerApi = {
+  create: (data: CreateOfferApprovalRequest): Promise<AxiosResponse<OfferApproval>> =>
+    api.post('/offers', data),
+
+  update: (id: number, data: UpdateOfferRequest): Promise<AxiosResponse<OfferApproval>> =>
+    api.put(`/offers/${id}`, data),
+
+  getById: (id: number): Promise<AxiosResponse<OfferApproval>> => api.get(`/offers/${id}`),
+
+  getByCandidate: (candidateId: number): Promise<AxiosResponse<OfferApproval>> =>
+    api.get(`/offers/candidate/${candidateId}`),
+
+  approve: (id: number, data: ApprovalActionRequest): Promise<AxiosResponse<OfferApproval>> =>
+    api.post(`/offers/${id}/approve`, data),
+
+  reject: (id: number, data: ApprovalActionRequest): Promise<AxiosResponse<OfferApproval>> =>
+    api.post(`/offers/${id}/reject`, data),
 };
 
 export default api;

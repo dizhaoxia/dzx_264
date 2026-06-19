@@ -50,6 +50,12 @@ public class Candidate {
     @Column(name = "education")
     private String education;
 
+    @Column(name = "locked", nullable = false)
+    private Boolean locked = false;
+
+    @Column(name = "talent_pool_status", nullable = false)
+    private String talentPoolStatus = "在库";
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "parsed_data", columnDefinition = "jsonb")
     private Map<String, Object> parsedData;

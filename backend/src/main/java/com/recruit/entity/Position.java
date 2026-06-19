@@ -53,7 +53,8 @@ public class Position {
                 Map.of("name", "二面", "order", 3),
                 Map.of("name", "HR面", "order", 4),
                 Map.of("name", "Offer", "order", 5),
-                Map.of("name", "已淘汰", "order", 6)
+                Map.of("name", "已淘汰", "order", 6),
+                Map.of("name", "已录用", "order", 7)
             );
         }
     }
