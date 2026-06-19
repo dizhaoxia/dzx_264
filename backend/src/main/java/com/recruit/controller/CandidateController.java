@@ -20,7 +20,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/candidates")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:59090")
 public class CandidateController {
 
     private final CandidateService candidateService;

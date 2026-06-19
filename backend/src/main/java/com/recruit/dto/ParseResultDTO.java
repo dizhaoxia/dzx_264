@@ -1,5 +1,7 @@
 package com.recruit.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -13,7 +15,22 @@ public class ParseResultDTO {
     private String email;
     private Integer workYears;
     private List<String> skills;
+
+    @JsonAlias({"confidenceScore", "confidence"})
     private BigDecimal confidenceScore;
-    private Map<String, Object> rawData;
+
+    @JsonAlias({"rawData", "rawText"})
+    private Object rawData;
+
     private String error;
+
+    @JsonProperty("confidence")
+    public BigDecimal getConfidence() {
+        return confidenceScore;
+    }
+
+    @JsonProperty("confidence")
+    public void setConfidence(BigDecimal confidence) {
+        this.confidenceScore = confidence;
+    }
 }

@@ -11,9 +11,9 @@ async function bootstrap() {
   // 启用全局验证管道
   app.useGlobalPipes(new ValidationPipe());
   
-  // 监听端口 3092
-  await app.listen(3092);
-  console.log('简历解析服务已启动，端口: 3092');
+  // 监听端口 3095
+  await app.listen(3095);
+  console.log('简历解析服务已启动，端口: 3095');
 }
 
 bootstrap();

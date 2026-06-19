@@ -15,7 +15,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/positions")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:59090")
 public class PositionController {
 
     private final PositionService positionService;

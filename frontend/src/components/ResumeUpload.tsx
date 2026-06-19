@@ -1,193 +1,183 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Upload, Progress, List, Button, Space, Alert, message } from 'antd';
 import { InboxOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons';
-import type { UploadChangeParam, UploadFile } from 'antd/es/upload/interface';
+import type { UploadProps } from 'antd/es/upload/interface';
 import type { UploadProgress } from '@/types';
 import { candidateApi } from '@/services/api';
 import { useKanbanStore } from '@/store/kanbanStore';
 
 const { Dragger } = Upload;
 
-interface UploadFileWithProcessed extends UploadFile {
-  _processed?: boolean;
-}
-
 interface ResumeUploadProps {
   open: boolean;
   onClose: () => void;
 }
 
+interface UploadTask {
+  uid: string;
+  fileName: string;
+  file: File;
+  progress: number;
+  status: UploadProgress['status'];
+  message?: string;
+}
+
 const ResumeUpload: React.FC<ResumeUploadProps> = ({ open, onClose }) => {
-  const [uploadProgressList, setUploadProgressList] = useState<UploadProgress[]>([]);
+  const [tasks, setTasks] = useState<UploadTask[]>([]);
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<{ success: number; error: number }>({ success: 0, error: 0 });
   const [showResults, setShowResults] = useState(false);
+  const processingRef = useRef<Set<string>>(new Set());
 
   const currentPositionId = useKanbanStore((state) => state.currentPositionId);
-  const addCandidates = useKanbanStore((state) => state.addCandidates);
   const fetchCandidates = useKanbanStore((state) => state.fetchCandidates);
+
+  useEffect(() => {
+    if (open) {
+      setTasks([]);
+      setResults({ success: 0, error: 0 });
+      setShowResults(false);
+      processingRef.current.clear();
+    }
+  }, [open]);
 
   const handleClose = () => {
     if (uploading) {
-      message.warning('有文件正在上传中，请等待完成或刷新页面取消');
+      message.warning('有文件正在上传中，请等待完成');
       return;
     }
-    setUploadProgressList([]);
-    setResults({ success: 0, error: 0 });
-    setShowResults(false);
     onClose();
   };
 
-  const uploadFile = useCallback(
-    async (file: File, positionId: number): Promise<void> => {
-      const fileIndex = uploadProgressList.findIndex((p) => p.fileName === file.name);
-      
-      try {
-        setUploadProgressList((prev) =>
-          prev.map((p, i) =>
-            i === fileIndex ? { ...p, progress: 0, status: 'uploading' as const } : p
-          )
-        );
+  const updateTask = (uid: string, updates: Partial<UploadTask>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.uid === uid ? { ...t, ...updates } : t))
+    );
+  };
 
-        const response = await candidateApi.uploadResume(
-          positionId,
-          file,
-          (progress) => {
-            setUploadProgressList((prev) =>
-              prev.map((p, i) =>
-                i === fileIndex
-                  ? { ...p, progress: Math.min(progress, 99), status: 'uploading' as const }
-                  : p
-              )
-            );
-          }
-        );
+  const processFile = async (task: UploadTask, positionId: number) => {
+    if (processingRef.current.has(task.uid)) {
+      return;
+    }
+    processingRef.current.add(task.uid);
 
-        setUploadProgressList((prev) =>
-          prev.map((p, i) =>
-            i === fileIndex
-              ? { ...p, progress: 100, status: 'parsing' as const, message: '正在解析简历...' }
-              : p
-          )
-        );
+    try {
+      updateTask(task.uid, { progress: 0, status: 'uploading' });
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (response.data.status === 'PROCESSING' || response.data.candidateId) {
-          setUploadProgressList((prev) =>
-            prev.map((p, i) =>
-              i === fileIndex
-                ? {
-                    ...p,
-                    progress: 100,
-                    status: 'success' as const,
-                    message: `上传成功，正在后台解析：${response.data.fileName}`,
-                  }
-                : p
-            )
-          );
-          setResults((prev) => ({ ...prev, success: prev.success + 1 }));
-        } else {
-          setUploadProgressList((prev) =>
-            prev.map((p, i) =>
-              i === fileIndex
-                ? {
-                    ...p,
-                    progress: 100,
-                    status: 'error' as const,
-                    message: response.data.message || '简历上传失败',
-                  }
-                : p
-            )
-          );
-          setResults((prev) => ({ ...prev, error: prev.error + 1 }));
+      const response = await candidateApi.uploadResume(
+        positionId,
+        task.file,
+        (progress) => {
+          updateTask(task.uid, {
+            progress: Math.min(progress, 99),
+            status: 'uploading',
+          });
         }
-      } catch (error: any) {
-        setUploadProgressList((prev) =>
-          prev.map((p, i) =>
-            i === fileIndex
-              ? {
-                  ...p,
-                  progress: 100,
-                  status: 'error' as const,
-                  message: error.message || '上传失败',
-                }
-              : p
-          )
-        );
+      );
+
+      updateTask(task.uid, {
+        progress: 100,
+        status: 'parsing',
+        message: '正在解析简历...',
+      });
+
+      if (response.data && (response.data.status === 'PROCESSING' || response.data.candidateId)) {
+        updateTask(task.uid, {
+          progress: 100,
+          status: 'success',
+          message: `上传成功，正在后台解析：${response.data.fileName || task.fileName}`,
+        });
+        setResults((prev) => ({ ...prev, success: prev.success + 1 }));
+      } else {
+        updateTask(task.uid, {
+          progress: 100,
+          status: 'error',
+          message: response.data?.message || '简历上传失败',
+        });
         setResults((prev) => ({ ...prev, error: prev.error + 1 }));
       }
-    },
-    [uploadProgressList, addCandidates]
-  );
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      updateTask(task.uid, {
+        progress: 100,
+        status: 'error',
+        message: error.message || '上传失败，请检查网络连接',
+      });
+      setResults((prev) => ({ ...prev, error: prev.error + 1 }));
+    } finally {
+      processingRef.current.delete(task.uid);
+    }
+  };
 
-  const handleBeforeUpload = useCallback(
-    (file: File) => {
-      if (!currentPositionId) {
-        message.error('请先选择一个职位');
-        return Upload.LIST_IGNORE;
-      }
+  const customRequest: UploadProps['customRequest'] = async (options) => {
+    const { file, onError, onSuccess } = options;
+    const fileObj = file as File;
+    const uid = String((file as any).uid || Date.now() + Math.random());
 
-      const isPdfOrDocx =
-        file.type === 'application/pdf' ||
-        file.type ===
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-        file.name.toLowerCase().endsWith('.pdf') ||
-        file.name.toLowerCase().endsWith('.docx');
+    if (!currentPositionId) {
+      message.error('请先选择一个职位');
+      onError?.(new Error('请先选择一个职位'));
+      return;
+    }
 
-      if (!isPdfOrDocx) {
-        message.error('只支持 PDF 或 DOCX 格式的文件');
-        return Upload.LIST_IGNORE;
-      }
+    const newTask: UploadTask = {
+      uid,
+      fileName: fileObj.name,
+      file: fileObj,
+      progress: 0,
+      status: 'uploading',
+    };
 
-      const isLt10M = file.size / 1024 / 1024 < 10;
-      if (!isLt10M) {
-        message.error('文件大小不能超过 10MB');
-        return Upload.LIST_IGNORE;
-      }
+    setTasks((prev) => [...prev, newTask]);
+    setUploading(true);
+    setShowResults(false);
 
-      setUploadProgressList((prev) => [
-        ...prev,
-        {
-          fileName: file.name,
-          progress: 0,
-          status: 'uploading',
-        },
-      ]);
+    try {
+      await processFile(newTask, currentPositionId);
+      onSuccess?.(null, fileObj);
+    } catch (err) {
+      onError?.(err as Error);
+    }
+  };
 
-      return false;
-    },
-    [currentPositionId]
-  );
-
-  const handleChange = useCallback(
-    async (info: UploadChangeParam<UploadFileWithProcessed>) => {
-      if (!currentPositionId) return;
-
-      const { fileList } = info;
-      const newFiles = fileList.filter((f) => f.status === 'uploading' && !f._processed);
-
-      if (newFiles.length > 0) {
-        setUploading(true);
-        setShowResults(false);
-
-        for (const file of newFiles) {
-          (file as UploadFileWithProcessed)._processed = true;
-          if (file.originFileObj) {
-            await uploadFile(file.originFileObj, currentPositionId);
-          }
-        }
-
+  useEffect(() => {
+    if (tasks.length > 0) {
+      const allDone = tasks.every(
+        (t) => t.status === 'success' || t.status === 'error'
+      );
+      if (allDone && uploading) {
         setUploading(false);
         setShowResults(true);
-
         if (currentPositionId) {
-          await fetchCandidates(currentPositionId);
+          setTimeout(() => {
+            fetchCandidates(currentPositionId);
+          }, 500);
         }
       }
-    },
-    [currentPositionId, uploadFile, fetchCandidates]
-  );
+    }
+  }, [tasks, uploading, currentPositionId, fetchCandidates]);
+
+  const beforeUpload = (file: File) => {
+    const isPdfOrDocx =
+      file.type === 'application/pdf' ||
+      file.type ===
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.name.toLowerCase().endsWith('.pdf') ||
+      file.name.toLowerCase().endsWith('.docx');
+
+    if (!isPdfOrDocx) {
+      message.error(`${file.name} 格式不支持，只支持 PDF 或 DOCX`);
+      return Upload.LIST_IGNORE;
+    }
+
+    const isLt50M = file.size / 1024 / 1024 < 50;
+    if (!isLt50M) {
+      message.error(`${file.name} 文件大小不能超过 50MB`);
+      return Upload.LIST_IGNORE;
+    }
+
+    return true;
+  };
 
   const getStatusIcon = (status: UploadProgress['status']) => {
     switch (status) {
@@ -227,6 +217,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ open, onClose }) => {
       footer={null}
       width={700}
       destroyOnClose
+      maskClosable={!uploading}
     >
       {!currentPositionId && (
         <Alert
@@ -241,38 +232,43 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ open, onClose }) => {
         name="file"
         multiple
         accept=".pdf,.docx"
-        beforeUpload={handleBeforeUpload}
-        onChange={handleChange}
+        beforeUpload={beforeUpload}
+        customRequest={customRequest}
         disabled={!currentPositionId || uploading}
         showUploadList={false}
-        fileList={[]}
       >
         <p className="ant-upload-drag-icon">
           <InboxOutlined />
         </p>
         <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
         <p className="ant-upload-hint">
-          支持批量上传 PDF 和 DOCX 格式简历，单个文件不超过 10MB
+          支持批量上传 PDF 和 DOCX 格式简历，单个文件不超过 50MB
         </p>
       </Dragger>
 
-      {uploadProgressList.length > 0 && (
+      {tasks.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <h4 style={{ marginBottom: 12 }}>上传列表</h4>
           <List
-            dataSource={uploadProgressList}
-            renderItem={(item, index) => (
-              <List.Item key={index}>
+            dataSource={tasks}
+            renderItem={(item) => (
+              <List.Item key={item.uid}>
                 <List.Item.Meta
                   avatar={getStatusIcon(item.status)}
                   title={
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span
+                        style={{
+                          flex: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          marginRight: 16,
+                        }}
+                      >
                         {item.fileName}
                       </span>
-                      <span style={{ marginLeft: 16, color: '#888' }}>
-                        {getStatusText(item.status)}
-                      </span>
+                      <span style={{ color: '#888' }}>{getStatusText(item.status)}</span>
                     </div>
                   }
                   description={

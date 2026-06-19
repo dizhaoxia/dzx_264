@@ -13,6 +13,7 @@ import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -60,16 +61,17 @@ public class CandidateService {
         candidate.setPositionId(positionId);
         candidate.setResumeFileUrl(fileUrl);
         candidate.setCurrentStage("初筛");
-        candidate.setCardOrder(candidateRepository.getNextCardOrder(positionId, "初筛"));
+        Integer nextOrder = candidateRepository.getNextCardOrder(positionId, "初筛");
+        candidate.setCardOrder(nextOrder == null ? 0 : nextOrder);
         candidate = candidateRepository.save(candidate);
 
-        asyncParseResume(candidate.getId(), fileUrl, fileName);
+        asyncParseResume(candidate.getId(), fileUrl, fileName, file.getBytes());
 
         return new UploadResponse(candidate.getId(), fileName, "PROCESSING", "简历已上传，正在解析中");
     }
 
     @Async("parseExecutor")
-    public void asyncParseResume(Long candidateId, String fileUrl, String fileName) {
+    public void asyncParseResume(Long candidateId, String fileUrl, String fileName, byte[] fileBytes) {
         try {
             log.info("开始解析简历: candidateId={}, fileName={}", candidateId, fileName);
 
@@ -77,6 +79,12 @@ public class CandidateService {
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", new ByteArrayResource(fileBytes) {
+                @Override
+                public String getFilename() {
+                    return fileName;
+                }
+            });
             body.add("fileUrl", fileUrl);
             body.add("fileName", fileName);
 
@@ -110,7 +118,15 @@ public class CandidateService {
             candidate.setWorkYears(result.getWorkYears());
             candidate.setSkills(result.getSkills());
             candidate.setConfidenceScore(result.getConfidenceScore());
-            candidate.setParsedData(result.getRawData());
+            if (result.getRawData() != null) {
+                Map<String, Object> parsedData = new HashMap<>();
+                if (result.getRawData() instanceof Map) {
+                    parsedData = (Map<String, Object>) result.getRawData();
+                } else {
+                    parsedData.put("rawText", result.getRawData().toString());
+                }
+                candidate.setParsedData(parsedData);
+            }
             candidateRepository.save(candidate);
         });
     }
@@ -143,12 +159,12 @@ public class CandidateService {
         if (!fromStage.equals(toStage)) {
             candidate.setCurrentStage(toStage);
 
-            StageLog log = new StageLog();
-            log.setCandidateId(candidate.getId());
-            log.setFromStage(fromStage);
-            log.setToStage(toStage);
-            log.setRemark(request.getRemark());
-            stageLogRepository.save(log);
+            StageLog stageLog = new StageLog();
+            stageLog.setCandidateId(candidate.getId());
+            stageLog.setFromStage(fromStage);
+            stageLog.setToStage(toStage);
+            stageLog.setRemark(request.getRemark());
+            stageLogRepository.save(stageLog);
         }
 
         if (request.getNewCardOrder() != null) {
